@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Frontend Toolbox",
+  "version": "1.0.0",
+  "description": "프론트엔드 개발을 위한 도구 모음",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "downloads",
+    "desktopCapture",
+    "tabCapture",
+    "contextMenus",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Frontend Toolbox"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
