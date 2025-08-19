@@ -1,5 +1,9 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
 import { ImageCollector } from '../features/imageDownloader';
 import { StyleExtractor } from '../features/styleInspector';
+import ModalManager from './ModalManager';
+import './ContentScript.css';
 
 // 메시지 리스너
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -60,4 +64,22 @@ if (document.readyState === 'loading') {
 
 function initializeContentScript() {
   console.log('Frontend Toolbox content script loaded');
+  
+  // 모달 매니저를 위한 컨테이너 생성
+  const modalContainer = document.createElement('div');
+  modalContainer.id = 'frontend-toolbox-modals';
+  modalContainer.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2147483647;
+  `;
+  document.body.appendChild(modalContainer);
+
+  // React 루트 생성 및 마운트
+  const root = createRoot(modalContainer);
+  root.render(<ModalManager />);
 }

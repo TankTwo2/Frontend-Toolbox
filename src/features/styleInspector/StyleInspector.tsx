@@ -13,6 +13,7 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
   const [isInspecting, setIsInspecting] = useState(false);
   const [styleData, setStyleData] = useState<StyleData | null>(null);
   const [activeTab, setActiveTab] = useState<'computed' | 'css' | 'tailwind'>('computed');
+  const [savedCount, setSavedCount] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -21,16 +22,28 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
         if (message.action === 'styleExtracted') {
           setStyleData(message.data);
           setIsInspecting(false);
+          // 저장 개수 업데이트
+          updateSavedCount();
         }
       };
       
       chrome.runtime.onMessage.addListener(handleMessage);
+      
+      // 초기 저장 개수 로드
+      updateSavedCount();
       
       return () => {
         chrome.runtime.onMessage.removeListener(handleMessage);
       };
     }
   }, [isOpen]);
+
+  const updateSavedCount = () => {
+    chrome.storage.local.get('savedStyles', (result) => {
+      const savedStyles = result.savedStyles || [];
+      setSavedCount(savedStyles.length);
+    });
+  };
 
   const startInspecting = async () => {
     try {
@@ -43,7 +56,7 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
       }
     } catch (error) {
       console.error('Failed to start style inspector:', error);
-      alert('스타일 검사기를 시작할 수 없습니다. 페이지를 새로고침하고 다시 시도해주세요.');
+      alert((error as Error).message || '스타일 검사기를 시작할 수 없습니다. 페이지를 새로고침하고 다시 시도해주세요.');
     }
   };
 
@@ -70,20 +83,14 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
     });
   };
 
-  const saveStyle = () => {
-    if (!styleData) return;
-    
-    // Save to chrome storage
-    chrome.storage.local.get('savedStyles', (result) => {
-      const savedStyles = result.savedStyles || [];
-      savedStyles.push({
-        id: Date.now(),
-        selector: styleData.selector,
-        properties: styleData.properties,
-        timestamp: new Date().toISOString()
+  const clearSavedStyles = () => {
+    if (confirm('저장된 모든 스타일을 삭제하시겠습니까?')) {
+      chrome.storage.local.set({ savedStyles: [] }, () => {
+        setSavedCount(0);
+        setStyleData(null);
+        alert('저장된 스타일이 모두 삭제되었습니다.');
       });
-      chrome.storage.local.set({ savedStyles });
-    });
+    }
   };
 
   const renderComputedStyles = () => {
@@ -167,9 +174,9 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
             </Button>
           )}
           
-          {styleData && (
-            <Button onClick={saveStyle} variant="secondary">
-              스타일 저장
+          {savedCount > 0 && (
+            <Button onClick={clearSavedStyles} variant="secondary">
+              저장 초기화 ({savedCount}개)
             </Button>
           )}
         </div>

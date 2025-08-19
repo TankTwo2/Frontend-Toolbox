@@ -38,7 +38,7 @@ const ImageDownloader: React.FC<ImageDownloaderProps> = ({ isOpen, onClose }) =>
       }
     } catch (error) {
       console.error('Failed to collect images:', error);
-      alert('이미지를 수집할 수 없습니다. 페이지를 새로고침하고 다시 시도해주세요.');
+      alert((error as Error).message || '이미지를 수집할 수 없습니다. 페이지를 새로고침하고 다시 시도해주세요.');
     }
     setLoading(false);
   };
@@ -101,11 +101,11 @@ const ImageDownloader: React.FC<ImageDownloaderProps> = ({ isOpen, onClose }) =>
 
   const modalTitle = (
     <div className="image-downloader-header">
-      <span>이미지 다운로더</span>
       <div className="selection-controls">
         <Button onClick={selectAll} size="small">전체 선택</Button>
         <Button onClick={deselectAll} size="small" variant="secondary">전체 해제</Button>
         <Button 
+          size='small'
           onClick={downloadSelected} 
           disabled={selectedImages.size === 0}
           variant="primary"

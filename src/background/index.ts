@@ -15,8 +15,29 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // 컨텍스트 메뉴 생성
   chrome.contextMenus.create({
-    id: 'analyze-element',
-    title: 'Frontend Toolbox로 스타일 분석',
+    id: 'frontend-toolbox-parent',
+    title: 'Frontend Toolbox',
+    contexts: ['all']
+  });
+
+  chrome.contextMenus.create({
+    id: 'image-downloader',
+    parentId: 'frontend-toolbox-parent',
+    title: '🖼️ 이미지 다운로더',
+    contexts: ['all']
+  });
+
+  chrome.contextMenus.create({
+    id: 'style-inspector',
+    parentId: 'frontend-toolbox-parent',
+    title: '🔍 스타일 검사기',
+    contexts: ['all']
+  });
+
+  chrome.contextMenus.create({
+    id: 'video-recorder',
+    parentId: 'frontend-toolbox-parent',
+    title: '🎥 비디오 녹화기',
     contexts: ['all']
   });
 });
@@ -68,10 +89,26 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 // 컨텍스트 메뉴 클릭 처리
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'analyze-element' && tab?.id) {
-    chrome.tabs.sendMessage(tab.id, {
-      action: 'startStyleInspector'
-    });
+  if (!tab?.id) return;
+
+  switch (info.menuItemId) {
+    case 'image-downloader':
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'openImageDownloader'
+      });
+      break;
+    
+    case 'style-inspector':
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'openStyleInspector'
+      });
+      break;
+    
+    case 'video-recorder':
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'openVideoRecorder'
+      });
+      break;
   }
 });
 

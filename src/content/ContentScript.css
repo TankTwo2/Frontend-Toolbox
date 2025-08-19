@@ -1,3 +1,158 @@
+#frontend-toolbox-modals {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  color: #333;
+}
+
+#frontend-toolbox-modals * {
+  box-sizing: border-box;
+}
+
+#frontend-toolbox-modals .modal-backdrop {
+  pointer-events: auto;
+}
+
+/* Import popup styles for modals */
+#frontend-toolbox-modals .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+#frontend-toolbox-modals .btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+#frontend-toolbox-modals .btn-medium {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+#frontend-toolbox-modals .btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: #667eea;
+}
+
+#frontend-toolbox-modals .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+#frontend-toolbox-modals .btn-secondary {
+  background: #6c757d;
+  color: white;
+  border-color: #6c757d;
+}
+
+#frontend-toolbox-modals .btn-secondary:hover {
+  background: #5a6268;
+  border-color: #545b62;
+}
+
+#frontend-toolbox-modals .btn-danger {
+  background: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+#frontend-toolbox-modals .btn-danger:hover {
+  background: #c82333;
+  border-color: #bd2130;
+}
+
+/* Modal Styles */
+#frontend-toolbox-modals .modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+#frontend-toolbox-modals .modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#frontend-toolbox-modals .modal-small {
+  width: 400px;
+}
+
+#frontend-toolbox-modals .modal-medium {
+  width: 600px;
+}
+
+#frontend-toolbox-modals .modal-large {
+  width: 800px;
+}
+
+#frontend-toolbox-modals .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+}
+
+#frontend-toolbox-modals .modal-title {
+  flex: 1;
+}
+
+#frontend-toolbox-modals .modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+#frontend-toolbox-modals .modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+#frontend-toolbox-modals .modal-close:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+#frontend-toolbox-modals .modal-content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
 .frontend-toolbox-panel {
   position: fixed;
   top: 20px;
@@ -125,4 +280,78 @@
     linear-gradient(rgba(102, 126, 234, 0.1) 1px, transparent 1px),
     linear-gradient(90deg, rgba(102, 126, 234, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+
+/* Style Inspector Styles */
+.frontend-toolbox-highlight {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2147483646;
+  border: 2px solid #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  transition: all 0.1s ease;
+}
+
+.frontend-tooltip {
+  position: fixed;
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  z-index: 2147483647;
+  max-width: 350px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid #4a5568;
+  pointer-events: none;
+}
+
+.frontend-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid #2d3748;
+}
+
+.frontend-tooltip .tooltip-selector {
+  color: #81e6d9;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.frontend-tooltip .tooltip-properties {
+  display: grid;
+  gap: 4px;
+}
+
+.frontend-tooltip .tooltip-property {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.frontend-tooltip .property-name {
+  color: #fbb6ce;
+  font-weight: 500;
+}
+
+.frontend-tooltip .property-value {
+  color: #bee3f8;
+  word-break: break-all;
+}
+
+.frontend-tooltip .tooltip-hint {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #4a5568;
+  color: #a0aec0;
+  font-size: 11px;
+  text-align: center;
 }
