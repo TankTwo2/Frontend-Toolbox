@@ -776,7 +776,7 @@
   font-size: 12px;
   color: #667eea;
   font-weight: 600;
-  max-width: 190px;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -804,6 +804,32 @@
 #frontend-toolbox-panels .saved-style-actions {
   display: flex;
   gap: 6px;
+}
+
+#frontend-toolbox-panels .saved-style-tailwind {
+  padding: 8px 12px;
+  background: #f8f9ff;
+  border-top: 1px solid #e9ecef;
+}
+
+#frontend-toolbox-panels .tailwind-classes-display {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  color: #495057;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+#frontend-toolbox-panels .tailwind-classes-display:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+  color: #667eea;
 }
 
 #frontend-toolbox-panels .saved-style-preview {

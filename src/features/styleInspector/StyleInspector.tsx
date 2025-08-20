@@ -348,12 +348,18 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
                       <Button onClick={() => copyToClipboard(style.css, 'CSS')} size="small">
                         CSS 복사
                       </Button>
-                      <Button onClick={() => copyToClipboard(style.tailwind, 'Tailwind')} size="small">
-                        Tailwind 복사
-                      </Button>
                       <Button onClick={() => deleteSavedStyle(style.id)} size="small" variant="danger">
                         삭제
                       </Button>
+                    </div>
+                  </div>
+                  <div className="saved-style-tailwind">
+                    <div 
+                      className="tailwind-classes-display"
+                      onClick={() => copyToClipboard(style.tailwind, 'Tailwind')}
+                      title="클릭하여 Tailwind 클래스 복사"
+                    >
+                      className="{style.tailwind}"
                     </div>
                   </div>
                   {expandedStyles.has(style.id) && (
