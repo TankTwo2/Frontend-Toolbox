@@ -64,8 +64,6 @@ if (document.readyState === 'loading') {
 }
 
 function initializeContentScript() {
-  console.log('Frontend Toolbox content script loaded');
-  
   // 패널 매니저를 위한 컨테이너 생성
   const panelContainer = document.createElement('div');
   panelContainer.id = 'frontend-toolbox-panels';

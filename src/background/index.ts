@@ -1,7 +1,5 @@
 // 확장 프로그램 설치 시 실행
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Frontend Toolbox extension installed');
-  
   // 기본 설정 저장
   chrome.storage.local.set({
     toolboxSettings: {
@@ -44,9 +42,7 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // 탭 업데이트 이벤트 처리
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url) {
-    console.log(`Tab updated: ${tab.url}`);
-  }
+  // Tab update listener for future use
 });
 
 // 컨텍스트 메뉴 클릭 처리
@@ -173,8 +169,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'styleExtracted':
       // Style inspector에서 추출된 스타일 데이터 처리
-      console.log('Style extracted:', message.data);
-      
       // 스타일을 저장소에 저장
       chrome.storage.local.get('savedStyles', (result) => {
         const savedStyles = result.savedStyles || [];
@@ -204,21 +198,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
 
     case 'recordingStarted':
-      console.log('Recording started:', message.data);
       sendResponse({ success: true });
       break;
 
     case 'recordingCompleted':
-      console.log('Recording completed:', message.data);
       sendResponse({ success: true });
       break;
 
     case 'startVideoRecording':
-      // 비디오 녹화는 content script에서 직접 처리해야 함
-      sendResponse({ 
-        error: '비디오 녹화는 웹페이지에서 직접 권한을 요청해야 합니다. getDisplayMedia API를 사용하세요.' 
-      });
-      break;
+      // 비디오 녹화 시작 - 탭 캡처 처리
+      if (message.data?.videoType === 'tab' && sender.tab?.id) {
+        const constraints = {
+          audio: message.data.audio || false,
+          video: true
+        };
+        
+        chrome.tabCapture.capture(constraints, (stream) => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ error: `탭 캡처 실패: ${chrome.runtime.lastError.message}` });
+            return;
+          }
+          
+          if (!stream) {
+            sendResponse({ error: '탭 스트림을 생성할 수 없습니다.' });
+            return;
+          }
+
+          // 스트림을 content script로 전달하기 위해 stream을 직렬화
+          sendResponse({ success: true, streamId: stream.id });
+        });
+      } else {
+        sendResponse({ 
+          error: '화면/영역 녹화는 content script에서 getDisplayMedia를 사용하세요.' 
+        });
+      }
+      return true;
 
     case 'stopVideoRecording':
       sendResponse({ 

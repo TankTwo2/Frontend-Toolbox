@@ -100,7 +100,6 @@ export class StyleExtractor {
       this.stopInspecting();
       
       // React 컴포넌트에 검사 중지 상태 알림
-      console.log('ESC pressed, sending inspectionStopped');
       window.dispatchEvent(new CustomEvent('frontend-toolbox-message', {
         detail: {
           action: 'inspectionStopped'
@@ -161,17 +160,12 @@ export class StyleExtractor {
       const styleData = this.extractStyles(element);
       hoverInfo.previewCSS = StyleExtractor.generateCSS(styleData);
       hoverInfo.previewTailwind = StyleExtractor.generateTailwindClasses(styleData);
-      console.log('Preview generated successfully:', {
-        css: hoverInfo.previewCSS.length,
-        tailwind: hoverInfo.previewTailwind.length
-      });
     } catch (error) {
       console.error('Error generating preview:', error);
       // 기본값 유지 (빈 문자열)
     }
 
     // Send hover info to StyleInspector panel
-    console.log('Sending hoverInfo:', hoverInfo);
     
     // content script 내에서 직접 이벤트 전달
     window.dispatchEvent(new CustomEvent('frontend-toolbox-message', {

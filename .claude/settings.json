@@ -1,0 +1,30 @@
+{
+  "tools": {
+    "enabled": ["read", "write", "edit", "multiedit", "bash", "grep", "glob", "ls"],
+    "disabled": []
+  },
+  "model": "claude-sonnet-4",
+  "memory": {
+    "enabled": true,
+    "max_tokens": 4000
+  },
+  "project": {
+    "name": "Frontend Toolbox",
+    "type": "chrome-extension",
+    "language": "typescript"
+  },
+  "preferences": {
+    "code_style": {
+      "indent": 2,
+      "quotes": "single",
+      "semicolons": true,
+      "trailing_commas": true
+    },
+    "build_commands": {
+      "build": "npm run build",
+      "dev": "npm run dev", 
+      "lint": "npm run lint",
+      "typecheck": "npm run typecheck"
+    }
+  }
+}

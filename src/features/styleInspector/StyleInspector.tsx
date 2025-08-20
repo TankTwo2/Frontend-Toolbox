@@ -41,10 +41,8 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
       const handleWindowMessage = (event: CustomEvent) => {
         const message = event.detail;
         if (message.action === 'hoverInfo') {
-          console.log('StyleInspector received hoverInfo via window event:', message.data);
           setHoverInfo(message.data);
         } else if (message.action === 'inspectionStopped') {
-          console.log('StyleInspector received inspectionStopped via window event');
           setIsInspecting(false);
           setHoverInfo(null);
         }
@@ -214,7 +212,6 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
               검사 중지 (ESC)
             </Button>
           )}
-          {console.log('Current isInspecting state:', isInspecting)}
           
           {savedCount > 0 && (
             <Button onClick={clearSavedStyles} variant="secondary">
@@ -233,7 +230,7 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
         )}
 
         {isInspecting && hoverInfo && (
-          <div className="hover-info-panel">{console.log('Rendering hover info panel:', hoverInfo)}
+          <div className="hover-info-panel">
             <div className="hover-element-info">
               <div className="element-selector">{hoverInfo.selector}</div>
               <div className="element-tag">

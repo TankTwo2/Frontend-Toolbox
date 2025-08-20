@@ -1,15 +1,19 @@
 import { RecordingData } from '../../types';
 import { generateUniqueId } from '../../utils/helpers';
+import { AreaCropper, CropArea } from './AreaCropper';
 
 class VideoRecorder {
   private static mediaRecorder: MediaRecorder | null = null;
   private static stream: MediaStream | null = null;
   private static recordedChunks: Blob[] = [];
   private static startTime: number = 0;
+  private static areaCropper: AreaCropper | null = null;
 
   static async startRecording(options: {
     audio: boolean;
-    videoType: 'tab' | 'window' | 'screen';
+    videoType: 'tab' | 'screen' | 'area';
+    area?: { x: number; y: number; width: number; height: number };
+    fps?: number;
   }): Promise<void> {
     try {
       // Request permission and get stream
@@ -19,8 +23,24 @@ class VideoRecorder {
         throw new Error('Failed to get media stream');
       }
 
+      // If area recording, set up cropping
+      let recordingStream = this.stream;
+      if (options.videoType === 'area' && options.area) {
+        const fps = options.fps || 30;
+        this.areaCropper = new AreaCropper(this.stream, options.area, fps);
+        recordingStream = await this.areaCropper.getCroppedStream();
+        
+        // Add audio track from original stream if needed
+        if (options.audio) {
+          const audioTracks = this.stream.getAudioTracks();
+          audioTracks.forEach(track => {
+            recordingStream.addTrack(track);
+          });
+        }
+      }
+
       // Initialize MediaRecorder
-      this.mediaRecorder = new MediaRecorder(this.stream, {
+      this.mediaRecorder = new MediaRecorder(recordingStream, {
         mimeType: 'video/webm;codecs=vp9'
       });
 
@@ -65,6 +85,12 @@ class VideoRecorder {
 
       this.mediaRecorder.stop();
       
+      // Stop cropper if exists
+      if (this.areaCropper) {
+        this.areaCropper.stop();
+        this.areaCropper = null;
+      }
+      
       // Stop all tracks
       if (this.stream) {
         this.stream.getTracks().forEach(track => track.stop());
@@ -75,18 +101,32 @@ class VideoRecorder {
 
   private static async getMediaStream(options: {
     audio: boolean;
-    videoType: 'tab' | 'window' | 'screen';
+    videoType: 'tab' | 'screen' | 'area';
+    area?: { x: number; y: number; width: number; height: number };
+    fps?: number;
   }): Promise<MediaStream> {
     try {
-      // 모든 경우에 getDisplayMedia API 사용 (표준 API)
+      // 모든 타입에 대해 getDisplayMedia 사용 (안정적인 방법)
+      let mediaSource: 'screen' | 'window' | 'browser' = 'screen';
+      
+      if (options.videoType === 'tab') {
+        mediaSource = 'browser'; // 브라우저 탭 선택 가능
+      } else if (options.videoType === 'screen') {
+        mediaSource = 'screen'; // 전체 화면
+      } else if (options.videoType === 'area') {
+        mediaSource = 'screen'; // 화면 영역 선택
+      }
+
       const constraints: DisplayMediaStreamConstraints = {
         video: {
-          mediaSource: options.videoType === 'tab' ? 'browser' : 'screen'
+          mediaSource: mediaSource
         } as any,
         audio: options.audio
       };
 
-      return await navigator.mediaDevices.getDisplayMedia(constraints);
+      const stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+      
+      return stream;
     } catch (error) {
       if (error.name === 'NotAllowedError') {
         throw new Error('화면 공유 권한이 거부되었습니다. 브라우저 설정에서 권한을 확인해주세요.');
@@ -120,25 +160,57 @@ class VideoRecorder {
   }
 
   static async downloadRecording(recording: RecordingData): Promise<void> {
-    const url = URL.createObjectURL(recording.blob);
-    const filename = `${recording.name}.webm`;
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(recording.blob);
+      const filename = `${recording.name}.webm`;
 
-    if (chrome?.downloads) {
-      chrome.downloads.download({
-        url: url,
-        filename: filename
-      });
-    } else {
-      // Fallback
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
+      if (chrome?.downloads) {
+        chrome.downloads.download({
+          url: url,
+          filename: filename
+        }, (downloadId) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
 
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+          if (downloadId) {
+            // Monitor download completion
+            const onChanged = (delta: chrome.downloads.DownloadDelta) => {
+              if (delta.id === downloadId && delta.state) {
+                if (delta.state.current === 'complete') {
+                  chrome.downloads.onChanged.removeListener(onChanged);
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  resolve();
+                } else if (delta.state.current === 'interrupted') {
+                  chrome.downloads.onChanged.removeListener(onChanged);
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  reject(new Error('Download was interrupted'));
+                }
+              }
+            };
+
+            chrome.downloads.onChanged.addListener(onChanged);
+          } else {
+            reject(new Error('Failed to start download'));
+          }
+        });
+      } else {
+        // Fallback for non-extension environments
+        try {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      }
+    });
   }
 
   static async deleteRecording(id: string): Promise<void> {
@@ -171,6 +243,7 @@ class VideoRecorder {
     if (!this.isRecording()) return 0;
     return Date.now() - this.startTime;
   }
+
 }
 
 export default VideoRecorder;
