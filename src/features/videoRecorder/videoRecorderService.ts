@@ -117,7 +117,7 @@ class VideoRecorder {
         mediaSource = 'screen'; // 화면 영역 선택
       }
 
-      const constraints: DisplayMediaStreamConstraints = {
+      const constraints: MediaStreamConstraints & { video: any } = {
         video: {
           mediaSource: mediaSource
         } as any,
@@ -128,12 +128,13 @@ class VideoRecorder {
       
       return stream;
     } catch (error) {
-      if (error.name === 'NotAllowedError') {
+      const err = error as Error;
+      if (err.name === 'NotAllowedError') {
         throw new Error('화면 공유 권한이 거부되었습니다. 브라우저 설정에서 권한을 확인해주세요.');
-      } else if (error.name === 'NotFoundError') {
+      } else if (err.name === 'NotFoundError') {
         throw new Error('화면 공유를 위한 미디어 장치를 찾을 수 없습니다.');
       } else {
-        throw new Error(`화면 공유 시작 실패: ${error.message}`);
+        throw new Error(`화면 공유 시작 실패: ${err.message}`);
       }
     }
   }

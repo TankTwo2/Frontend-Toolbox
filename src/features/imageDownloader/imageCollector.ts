@@ -192,7 +192,7 @@ export class ImageCollector {
             return;
           } catch (bgError) {
             console.error('All download methods failed:', bgError);
-            throw new Error(`다운로드 실패: ${fetchError.message || fetchError}`);
+            throw new Error(`다운로드 실패: ${(fetchError as Error).message || fetchError}`);
           }
         }
       }

@@ -6,8 +6,16 @@
     "dev": "webpack --mode=development --watch",
     "build": "webpack --mode=production",
     "build:dev": "webpack --mode=development",
+    "build:production": "npm run clean && npm run typecheck && webpack --mode=production",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist/",
+    "version:patch": "node scripts/bump-version.js patch",
+    "version:minor": "node scripts/bump-version.js minor", 
+    "version:major": "node scripts/bump-version.js major",
+    "package": "node scripts/package.js",
+    "upload": "node scripts/upload.js",
+    "release": "npm run build:production && npm run package",
+    "deploy": "npm run release && npm run upload",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -31,6 +39,7 @@
   },
   "devDependencies": {
     "@types/chrome": "^0.1.4",
+    "archiver": "^7.0.1",
     "copy-webpack-plugin": "^13.0.1",
     "css-loader": "^7.1.2",
     "html-webpack-plugin": "^5.6.4",
@@ -38,6 +47,7 @@
     "ts-loader": "^9.5.2",
     "webpack": "^5.101.2",
     "webpack-cli": "^6.0.1",
-    "webpack-dev-server": "^5.2.2"
+    "webpack-dev-server": "^5.2.2",
+    "webstore-upload": "^0.0.8"
   }
 }

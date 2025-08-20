@@ -62,10 +62,7 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({ isOpen, onClose }) => {
     }
 
     try {
-      const options = selectedArea && recordingOptions.videoType === 'area' 
-        ? { ...recordingOptions, area: selectedArea }
-        : recordingOptions;
-      await VideoRecorderService.startRecording(options);
+      await VideoRecorderService.startRecording(recordingOptions);
       setIsRecording(true);
     } catch (error) {
       console.error('Failed to start recording:', error);

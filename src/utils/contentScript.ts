@@ -16,8 +16,9 @@ export const ensureContentScriptLoaded = async (tabId: number): Promise<boolean>
     await chrome.tabs.sendMessage(tabId, { action: 'ping' });
     return true;
   } catch (error) {
+    const err = error as Error;
     // URL 검증 오류는 바로 전파
-    if (error.message.includes('이 페이지에서는')) {
+    if (err.message.includes('이 페이지에서는')) {
       throw error;
     }
 
