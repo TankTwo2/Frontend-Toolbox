@@ -23,7 +23,8 @@ const ModalManager: React.FC = () => {
   });
 
   useEffect(() => {
-    const handleMessage = (message: any) => {
+    const handleMessage = (event: CustomEvent) => {
+      const message = event.detail;
       switch (message.action) {
         case 'openImageDownloader':
           setModals(prev => ({ ...prev, imageDownloader: true }));
@@ -37,8 +38,8 @@ const ModalManager: React.FC = () => {
       }
     };
 
-    chrome.runtime.onMessage.addListener(handleMessage);
-    return () => chrome.runtime.onMessage.removeListener(handleMessage);
+    window.addEventListener('frontend-toolbox-message', handleMessage as EventListener);
+    return () => window.removeEventListener('frontend-toolbox-message', handleMessage as EventListener);
   }, []);
 
   const closeModal = (modalName: keyof ModalState) => {

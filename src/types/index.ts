@@ -5,7 +5,7 @@ export interface ImageData {
   width?: number;
   height?: number;
   size?: number;
-  type: 'img' | 'background' | 'svg';
+  type: 'img' | 'background' | 'svg' | 'jpeg' | 'png' | 'gif' | 'webp' | 'bmp' | 'tiff' | 'ico' | 'avif' | 'jpeg-bg' | 'png-bg' | 'gif-bg' | 'webp-bg';
 }
 
 export interface StyleData {

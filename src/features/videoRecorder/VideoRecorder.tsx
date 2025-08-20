@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RecordingData } from '../../types';
-import { Button, Modal } from '../../components';
+import { Button } from '../../components';
 import { VideoRecorderService } from './';
 import { formatFileSize } from '../../utils/helpers';
 
@@ -53,10 +53,9 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({ isOpen, onClose }) => {
     try {
       await VideoRecorderService.startRecording(recordingOptions);
       setIsRecording(true);
-      setRecordingDuration(0);
     } catch (error) {
       console.error('Failed to start recording:', error);
-      alert('녹화를 시작할 수 없습니다. 권한을 확인해주세요.');
+      alert((error as Error).message || '녹화를 시작할 수 없습니다.');
     }
   };
 
@@ -77,6 +76,7 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({ isOpen, onClose }) => {
       await VideoRecorderService.downloadRecording(recording);
     } catch (error) {
       console.error('Failed to download recording:', error);
+      alert('녹화 파일 다운로드에 실패했습니다.');
     }
   };
 
@@ -87,6 +87,7 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({ isOpen, onClose }) => {
         setRecordings(prev => prev.filter(r => r.id !== id));
       } catch (error) {
         console.error('Failed to delete recording:', error);
+        alert('녹화 파일 삭제에 실패했습니다.');
       }
     }
   };
@@ -103,8 +104,7 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="비디오 녹화기" size="large">
-      <div className="video-recorder">
+    <div className="video-recorder">
         <div className="recording-controls">
           <div className="recording-options">
             <label>
@@ -206,8 +206,7 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({ isOpen, onClose }) => {
             <li>브라우저를 닫으면 저장된 녹화 목록이 초기화됩니다</li>
           </ul>
         </div>
-      </div>
-    </Modal>
+    </div>
   );
 };
 

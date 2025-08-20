@@ -6,6 +6,21 @@ export class ImageCollector {
     const images: ImageData[] = [];
     const imageUrls = new Set<string>();
 
+    // Helper function to get image type from URL
+    const getImageType = (url: string): string => {
+      const urlLower = url.toLowerCase();
+      if (urlLower.includes('.jpg') || urlLower.includes('.jpeg')) return 'jpeg';
+      if (urlLower.includes('.png')) return 'png';
+      if (urlLower.includes('.gif')) return 'gif';
+      if (urlLower.includes('.webp')) return 'webp';
+      if (urlLower.includes('.bmp')) return 'bmp';
+      if (urlLower.includes('.tiff') || urlLower.includes('.tif')) return 'tiff';
+      if (urlLower.includes('.ico')) return 'ico';
+      if (urlLower.includes('.avif')) return 'avif';
+      // 확장자로 판단할 수 없는 경우 기본값
+      return 'img';
+    };
+
     // Collect img tags
     const imgElements = document.querySelectorAll('img');
     for (const img of imgElements) {
@@ -18,7 +33,7 @@ export class ImageCollector {
           alt: img.alt,
           width: img.naturalWidth || undefined,
           height: img.naturalHeight || undefined,
-          type: 'img'
+          type: getImageType(src)
         });
       }
     }
@@ -35,10 +50,11 @@ export class ImageCollector {
           const url = matches[1];
           if (isValidUrl(url) && !imageUrls.has(url)) {
             imageUrls.add(url);
+            const imageType = getImageType(url);
             images.push({
               url: url,
               src: url,
-              type: 'background'
+              type: imageType === 'img' ? 'background' : `${imageType}-bg` // 배경이미지는 타입뒤에 -bg 붙임
             });
           }
         }
@@ -50,19 +66,20 @@ export class ImageCollector {
     for (let i = 0; i < svgElements.length; i++) {
       const svg = svgElements[i];
       if (svg.outerHTML) {
+        // SVG를 data URL로 변환 (더 안정적)
         const svgData = svg.outerHTML;
-        const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
-        const svgUrl = URL.createObjectURL(svgBlob);
+        const svgDataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgData)))}`;
         
         // SVG 식별을 위한 데이터 속성 추가
         svg.setAttribute('data-svg-index', i.toString());
         
+        const rect = svg.getBoundingClientRect();
         images.push({
-          url: svgUrl,
-          src: svgUrl,
+          url: svgDataUrl,
+          src: svgDataUrl,
           type: 'svg',
-          width: svg.clientWidth || svg.getBoundingClientRect().width || undefined,
-          height: svg.clientHeight || svg.getBoundingClientRect().height || undefined,
+          width: Math.max(svg.clientWidth, rect.width, 50) || 100,
+          height: Math.max(svg.clientHeight, rect.height, 50) || 100,
           alt: `SVG-${i + 1}` // SVG 식별용
         });
       }
@@ -72,10 +89,11 @@ export class ImageCollector {
     for (const image of images) {
       try {
         if (image.type === 'svg') {
-          // SVG는 blob이므로 크기 정보를 다르게 처리
-          if (!image.width) image.width = 100;
-          if (!image.height) image.height = 100;
-          image.size = new Blob([image.src]).size; // SVG 문자열 크기
+          // SVG는 data URL이므로 크기 정보를 다르게 처리
+          if (!image.width || image.width < 10) image.width = 100;
+          if (!image.height || image.height < 10) image.height = 100;
+          // SVG data URL의 대략적인 크기 계산
+          image.size = Math.round(image.src.length * 0.75); // base64 디코딩 후 예상 크기
         } else {
           const dimensions = await getImageDimensions(image.src);
           if (!image.width) image.width = dimensions.width;

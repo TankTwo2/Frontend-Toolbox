@@ -5,8 +5,6 @@ export class StyleExtractor {
   private static highlightElement: HTMLElement | null = null;
   private static overlayElement: HTMLElement | null = null;
 
-  private static infoElement: HTMLElement | null = null;
-
   static createOverlay(): void {
     if (this.overlayElement) return;
 
@@ -24,6 +22,7 @@ export class StyleExtractor {
       display: none;
     `;
 
+
     this.highlightElement = document.createElement('div');
     this.highlightElement.id = 'frontend-toolbox-highlight';
     this.highlightElement.style.cssText = `
@@ -37,27 +36,8 @@ export class StyleExtractor {
       box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
     `;
 
-    this.infoElement = document.createElement('div');
-    this.infoElement.id = 'frontend-toolbox-info';
-    this.infoElement.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 16px;
-      border-radius: 12px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 14px;
-      z-index: 1000001;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-      max-width: 300px;
-      display: none;
-    `;
-
     document.body.appendChild(this.overlayElement);
     document.body.appendChild(this.highlightElement);
-    document.body.appendChild(this.infoElement);
   }
 
   static removeOverlay(): void {
@@ -69,10 +49,6 @@ export class StyleExtractor {
       this.highlightElement.remove();
       this.highlightElement = null;
     }
-    if (this.infoElement) {
-      this.infoElement.remove();
-      this.infoElement = null;
-    }
   }
 
   static startInspecting(): void {
@@ -81,9 +57,10 @@ export class StyleExtractor {
     document.body.style.cursor = 'crosshair';
 
     document.addEventListener('mouseover', this.handleMouseOver);
-    document.addEventListener('keydown', this.handleKeyDown);
+    // window에서 더 높은 우선순위로 ESC 키 처리
+    window.addEventListener('keydown', this.handleKeyDown, { capture: true, passive: false });
     
-    // 페이지 클릭 방지
+    // 페이지 클릭 방지 (검사 중지 버튼은 제외)
     document.addEventListener('click', this.preventClick, true);
   }
 
@@ -92,7 +69,7 @@ export class StyleExtractor {
     document.body.style.cursor = '';
 
     document.removeEventListener('mouseover', this.handleMouseOver);
-    document.removeEventListener('keydown', this.handleKeyDown);
+    window.removeEventListener('keydown', this.handleKeyDown, { capture: true });
     document.removeEventListener('click', this.preventClick, true);
   }
 
@@ -117,9 +94,21 @@ export class StyleExtractor {
 
   private static handleKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') {
-      this.stopInspecting();
-    } else if (event.key === 'Enter' && this.currentTarget) {
       event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      this.stopInspecting();
+      
+      // React 컴포넌트에 검사 중지 상태 알림
+      console.log('ESC pressed, sending inspectionStopped');
+      window.dispatchEvent(new CustomEvent('frontend-toolbox-message', {
+        detail: {
+          action: 'inspectionStopped'
+        }
+      }));
+    } else if (event.key === 'Shift' && this.currentTarget) {
+      event.preventDefault();
+      event.stopPropagation();
       
       const styleData = this.extractStyles(this.currentTarget);
       
@@ -149,30 +138,48 @@ export class StyleExtractor {
   }
 
   private static showHoverInfo(element: HTMLElement): void {
-    if (!this.infoElement) return;
-
+    // 별도 툴팁 대신 패널로 정보 전송
     const selector = getElementSelector(element);
     const computed = window.getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
     
-    this.infoElement.innerHTML = `
-      <div style="font-weight: 600; margin-bottom: 8px; font-size: 16px;">
-        ${selector}
-      </div>
-      <div style="font-size: 12px; opacity: 0.9; margin-bottom: 12px;">
-        ${element.tagName.toLowerCase()}${element.className ? '.' + element.className.split(' ').join('.') : ''}
-      </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-        <div><strong>Width:</strong> ${Math.round(element.getBoundingClientRect().width)}px</div>
-        <div><strong>Height:</strong> ${Math.round(element.getBoundingClientRect().height)}px</div>
-        <div><strong>Display:</strong> ${computed.display}</div>
-        <div><strong>Position:</strong> ${computed.position}</div>
-      </div>
-      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2); font-size: 12px; text-align: center;">
-        <strong>Enter</strong>로 저장 • <strong>ESC</strong>로 종료
-      </div>
-    `;
+    // 기본 정보 먼저 설정
+    let hoverInfo = {
+      selector,
+      tagName: element.tagName.toLowerCase(),
+      className: element.className ? element.className.split(' ').join('.') : '',
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      display: computed.display,
+      position: computed.position,
+      previewCSS: '',
+      previewTailwind: ''
+    };
+
+    // 미리보기 생성 시도
+    try {
+      const styleData = this.extractStyles(element);
+      hoverInfo.previewCSS = StyleExtractor.generateCSS(styleData);
+      hoverInfo.previewTailwind = StyleExtractor.generateTailwindClasses(styleData);
+      console.log('Preview generated successfully:', {
+        css: hoverInfo.previewCSS.length,
+        tailwind: hoverInfo.previewTailwind.length
+      });
+    } catch (error) {
+      console.error('Error generating preview:', error);
+      // 기본값 유지 (빈 문자열)
+    }
+
+    // Send hover info to StyleInspector panel
+    console.log('Sending hoverInfo:', hoverInfo);
     
-    this.infoElement.style.display = 'block';
+    // content script 내에서 직접 이벤트 전달
+    window.dispatchEvent(new CustomEvent('frontend-toolbox-message', {
+      detail: {
+        action: 'hoverInfo',
+        data: hoverInfo
+      }
+    }));
   }
 
   private static showSaveToast(): void {
@@ -214,6 +221,49 @@ export class StyleExtractor {
       toast.remove();
       style.remove();
     }, 2000);
+  }
+
+  static showCopyToast(message: string): void {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 1000002;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      animation: copyFadeInOut 1.5s ease-in-out;
+    `;
+    
+    toast.textContent = message;
+    
+    // CSS 애니메이션 추가
+    if (!document.getElementById('copy-toast-style')) {
+      const style = document.createElement('style');
+      style.id = 'copy-toast-style';
+      style.textContent = `
+        @keyframes copyFadeInOut {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+          15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.remove();
+    }, 1500);
   }
 
   static extractStyles(element: HTMLElement): StyleData {

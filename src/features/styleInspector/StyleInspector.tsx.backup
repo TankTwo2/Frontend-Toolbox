@@ -12,53 +12,31 @@ interface StyleInspectorProps {
 const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
   const [isInspecting, setIsInspecting] = useState(false);
   const [styleData, setStyleData] = useState<StyleData | null>(null);
-  const [activeTab, setActiveTab] = useState<'computed' | 'css' | 'tailwind'>('tailwind');
+  const [activeTab, setActiveTab] = useState<'computed' | 'css' | 'tailwind'>('computed');
   const [savedCount, setSavedCount] = useState(0);
-  const [savedStyles, setSavedStyles] = useState<any[]>([]);
   const [hoverInfo, setHoverInfo] = useState<any>(null);
-  const [expandedStyles, setExpandedStyles] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isOpen) {
-      // Listen for style data from background script (storage related)
-      const handleBackgroundMessage = (message: any) => {
+      // Listen for style data from content script
+      const handleMessage = (message: any) => {
         if (message.action === 'styleExtracted') {
           setStyleData(message.data);
           setIsInspecting(false);
-          // stylesSaved 메시지가 오지 않을 경우를 대비한 fallback
-          setTimeout(() => {
-            loadSavedStyles();
-          }, 500);
-        } else if (message.action === 'stylesSaved') {
-          // 저장 완료 후 즉시 상태 업데이트
-          const { savedStyles } = message.data;
-          setSavedStyles([...savedStyles]);
-          setSavedCount(savedStyles.length);
-        }
-      };
-
-      // Listen for direct window events from content script
-      const handleWindowMessage = (event: CustomEvent) => {
-        const message = event.detail;
-        if (message.action === 'hoverInfo') {
-          console.log('StyleInspector received hoverInfo via window event:', message.data);
+          // 저장 개수 업데이트
+          updateSavedCount();
+        } else if (message.action === 'hoverInfo') {
           setHoverInfo(message.data);
-        } else if (message.action === 'inspectionStopped') {
-          console.log('StyleInspector received inspectionStopped via window event');
-          setIsInspecting(false);
-          setHoverInfo(null);
         }
       };
       
-      chrome.runtime.onMessage.addListener(handleBackgroundMessage);
-      window.addEventListener('frontend-toolbox-message', handleWindowMessage as EventListener);
+      chrome.runtime.onMessage.addListener(handleMessage);
       
-      // 초기 저장된 스타일 로드
-      loadSavedStyles();
+      // 초기 저장 개수 로드
+      updateSavedCount();
       
       return () => {
-        chrome.runtime.onMessage.removeListener(handleBackgroundMessage);
-        window.removeEventListener('frontend-toolbox-message', handleWindowMessage as EventListener);
+        chrome.runtime.onMessage.removeListener(handleMessage);
       };
     }
   }, [isOpen]);
@@ -66,7 +44,7 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
   const loadSavedStyles = () => {
     chrome.storage.local.get('savedStyles', (result) => {
       const styles = result.savedStyles || [];
-      setSavedStyles([...styles]); // 새 배열로 강제 업데이트
+      setSavedStyles(styles);
       setSavedCount(styles.length);
     });
   };
@@ -94,14 +72,12 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const copyToClipboard = (text: string, type: string = '') => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      // Show success message with toast
-      const message = type ? `${type} 복사 완료!` : '복사 완료!';
-      StyleExtractor.showCopyToast(message);
+      // Show success message
+      console.log('Copied to clipboard');
     }).catch(err => {
       console.error('Failed to copy:', err);
-      StyleExtractor.showCopyToast('복사 실패');
     });
   };
 
@@ -122,16 +98,6 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
       setSavedStyles(updatedStyles);
       setSavedCount(updatedStyles.length);
     });
-  };
-
-  const toggleStyleExpansion = (styleId: string) => {
-    const newExpanded = new Set(expandedStyles);
-    if (newExpanded.has(styleId)) {
-      newExpanded.delete(styleId);
-    } else {
-      newExpanded.add(styleId);
-    }
-    setExpandedStyles(newExpanded);
   };
 
   const renderComputedStyles = () => {
@@ -164,7 +130,7 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
     return (
       <div className="css-output">
         <div className="code-header">
-          <Button onClick={() => copyToClipboard(css, 'CSS')} size="small">
+          <Button onClick={() => copyToClipboard(css)} size="small">
             복사
           </Button>
         </div>
@@ -181,7 +147,7 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
     return (
       <div className="tailwind-output">
         <div className="code-header">
-          <Button onClick={() => copyToClipboard(tailwindClasses, 'Tailwind')} size="small">
+          <Button onClick={() => copyToClipboard(tailwindClasses)} size="small">
             복사
           </Button>
         </div>
@@ -203,7 +169,6 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="style-inspector">
-      <div className="style-inspector-fixed-header">
         <div className="inspector-controls">
           {!isInspecting ? (
             <Button onClick={startInspecting} variant="primary">
@@ -214,7 +179,6 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
               검사 중지 (ESC)
             </Button>
           )}
-          {console.log('Current isInspecting state:', isInspecting)}
           
           {savedCount > 0 && (
             <Button onClick={clearSavedStyles} variant="secondary">
@@ -222,9 +186,7 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
             </Button>
           )}
         </div>
-      </div>
 
-      <div className="style-content-scrollable">
         {isInspecting && (
           <div className="inspector-guide">
             <p>🎯 검사할 요소 위에 마우스를 올려보세요</p>
@@ -233,7 +195,7 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
         )}
 
         {isInspecting && hoverInfo && (
-          <div className="hover-info-panel">{console.log('Rendering hover info panel:', hoverInfo)}
+          <div className="hover-info-panel">
             <div className="hover-element-info">
               <div className="element-selector">{hoverInfo.selector}</div>
               <div className="element-tag">
@@ -258,26 +220,6 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
             </div>
-            
-            {hoverInfo && (
-              <div className="save-preview-section">
-                <h5>💾 Shift로 저장될 내용</h5>
-                <div className="preview-content">
-                  <div className="preview-tailwind">
-                    <strong>Tailwind:</strong>
-                    <div className="preview-code">
-                      {hoverInfo.previewTailwind || '생성 중...'}
-                    </div>
-                  </div>
-                  <div className="preview-css">
-                    <strong>CSS:</strong>
-                    <pre className="preview-css-code">
-                      {hoverInfo.previewCSS || '생성 중...'}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -289,10 +231,10 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
 
             <div className="style-tabs">
               <button
-                className={`tab ${activeTab === 'tailwind' ? 'active' : ''}`}
-                onClick={() => setActiveTab('tailwind')}
+                className={`tab ${activeTab === 'computed' ? 'active' : ''}`}
+                onClick={() => setActiveTab('computed')}
               >
-                Tailwind
+                계산된 스타일
               </button>
               <button
                 className={`tab ${activeTab === 'css' ? 'active' : ''}`}
@@ -301,17 +243,17 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
                 CSS
               </button>
               <button
-                className={`tab ${activeTab === 'computed' ? 'active' : ''}`}
-                onClick={() => setActiveTab('computed')}
+                className={`tab ${activeTab === 'tailwind' ? 'active' : ''}`}
+                onClick={() => setActiveTab('tailwind')}
               >
-                계산된 스타일
+                Tailwind
               </button>
             </div>
 
             <div className="tab-content">
-              {activeTab === 'tailwind' && renderTailwind()}
-              {activeTab === 'css' && renderCSS()}
               {activeTab === 'computed' && renderComputedStyles()}
+              {activeTab === 'css' && renderCSS()}
+              {activeTab === 'tailwind' && renderTailwind()}
             </div>
           </div>
         )}
@@ -326,29 +268,15 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
           <div className="saved-styles-section">
             <h4>저장된 스타일 ({savedStyles.length}개)</h4>
             <div className="saved-styles-list">
-              {savedStyles.map((style, index) => (
-                <div key={`${style.id}-${index}-${savedStyles.length}`} className="saved-style-item">
+              {savedStyles.map((style) => (
+                <div key={style.id} className="saved-style-item">
                   <div className="saved-style-header">
-                    <div className="saved-style-info">
-                      <span 
-                        className="saved-style-selector"
-                        title={style.selector}
-                      >
-                        {style.selector}
-                      </span>
-                      <button 
-                        className="expand-toggle"
-                        onClick={() => toggleStyleExpansion(style.id)}
-                        title={expandedStyles.has(style.id) ? "CSS 숨기기" : "CSS 보기"}
-                      >
-                        {expandedStyles.has(style.id) ? '▼' : '▶'} CSS
-                      </button>
-                    </div>
+                    <span className="saved-style-selector">{style.selector}</span>
                     <div className="saved-style-actions">
-                      <Button onClick={() => copyToClipboard(style.css, 'CSS')} size="small">
+                      <Button onClick={() => copyToClipboard(style.css)} size="small">
                         CSS 복사
                       </Button>
-                      <Button onClick={() => copyToClipboard(style.tailwind, 'Tailwind')} size="small">
+                      <Button onClick={() => copyToClipboard(style.tailwind)} size="small">
                         Tailwind 복사
                       </Button>
                       <Button onClick={() => deleteSavedStyle(style.id)} size="small" variant="danger">
@@ -356,11 +284,9 @@ const StyleInspector: React.FC<StyleInspectorProps> = ({ isOpen, onClose }) => {
                       </Button>
                     </div>
                   </div>
-                  {expandedStyles.has(style.id) && (
-                    <div className="saved-style-preview">
-                      <pre className="saved-style-css">{style.css}</pre>
-                    </div>
-                  )}
+                  <div className="saved-style-preview">
+                    <pre className="saved-style-css">{style.css}</pre>
+                  </div>
                 </div>
               ))}
             </div>

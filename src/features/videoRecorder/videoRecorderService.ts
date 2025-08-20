@@ -40,12 +40,6 @@ class VideoRecorder {
 
       // Start recording
       this.mediaRecorder.start(1000); // Collect data every second
-      
-      // Notify that recording started
-      chrome.runtime.sendMessage({
-        action: 'recordingStarted',
-        data: { startTime: this.startTime }
-      });
 
     } catch (error) {
       console.error('Failed to start recording:', error);
@@ -83,50 +77,24 @@ class VideoRecorder {
     audio: boolean;
     videoType: 'tab' | 'window' | 'screen';
   }): Promise<MediaStream> {
-    const constraints: any = {
-      audio: options.audio,
-      video: true
-    };
+    try {
+      // 모든 경우에 getDisplayMedia API 사용 (표준 API)
+      const constraints: DisplayMediaStreamConstraints = {
+        video: {
+          mediaSource: options.videoType === 'tab' ? 'browser' : 'screen'
+        } as any,
+        audio: options.audio
+      };
 
-    switch (options.videoType) {
-      case 'tab':
-        // Use chrome.tabCapture API
-        return new Promise((resolve, reject) => {
-          chrome.tabCapture.capture(constraints, (stream) => {
-            if (stream) {
-              resolve(stream);
-            } else {
-              reject(new Error('Failed to capture tab'));
-            }
-          });
-        });
-
-      case 'window':
-      case 'screen':
-        // Use chrome.desktopCapture API
-        return new Promise((resolve, reject) => {
-          chrome.desktopCapture.chooseDesktopMedia(
-            ['screen', 'window', 'tab'],
-            (streamId) => {
-              if (streamId) {
-                navigator.mediaDevices.getUserMedia({
-                  audio: options.audio,
-                  video: {
-                    mandatory: {
-                      chromeMediaSource: 'desktop',
-                      chromeMediaSourceId: streamId
-                    }
-                  } as any
-                }).then(resolve).catch(reject);
-              } else {
-                reject(new Error('User cancelled screen capture'));
-              }
-            }
-          );
-        });
-
-      default:
-        throw new Error('Invalid video type');
+      return await navigator.mediaDevices.getDisplayMedia(constraints);
+    } catch (error) {
+      if (error.name === 'NotAllowedError') {
+        throw new Error('화면 공유 권한이 거부되었습니다. 브라우저 설정에서 권한을 확인해주세요.');
+      } else if (error.name === 'NotFoundError') {
+        throw new Error('화면 공유를 위한 미디어 장치를 찾을 수 없습니다.');
+      } else {
+        throw new Error(`화면 공유 시작 실패: ${error.message}`);
+      }
     }
   }
 
@@ -147,12 +115,6 @@ class VideoRecorder {
     const recordings = await this.getStoredRecordings();
     recordings.push(recordingData);
     await this.saveRecordings(recordings);
-
-    // Notify completion
-    chrome.runtime.sendMessage({
-      action: 'recordingCompleted',
-      data: recordingData
-    });
 
     return recordingData;
   }
